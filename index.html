@@ -24,9 +24,25 @@ h1{color:var(--az);margin:0 0 4px;font-size:25px}
 .bar select,.bar input[type=date],.btn,summary{padding:8px 11px;border:1px solid #ced4da;border-radius:6px;font-size:13px;background:#fff;font-family:inherit}
 .btn{cursor:pointer;font-weight:600}.btn:hover{background:#e9ecef}
 .btn.pri{background:var(--az);color:#fff;border-color:var(--az)}
-details{position:relative}summary{cursor:pointer;list-style:none;min-width:200px}
-details>div{position:absolute;z-index:20;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 8px 16px #0002;padding:10px;max-height:260px;overflow:auto;min-width:300px;margin-top:4px}
-details label{flex-direction:row;font-weight:400;color:var(--tx);align-items:center;padding:3px}
+.dd{position:relative}
+.dd-btn{width:270px;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;padding:8px 11px;border:1px solid #ced4da;border-radius:6px;background:#fff;font:inherit;font-size:13px;font-weight:400;color:var(--tx)}
+.dd-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-btn:after{content:"▾";color:var(--mu)}
+.dd-panel{display:none;position:absolute;z-index:30;top:100%;left:0;width:350px;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 8px 20px #0003;padding:10px;margin-top:4px}
+.dd-panel.open{display:block}
+.dd-panel input[type=search]{width:100%;padding:7px 9px;border:1px solid #ced4da;border-radius:6px;font-size:13px;margin-bottom:6px}
+.dd-acts{display:flex;gap:12px;margin-bottom:6px}
+.lnk,.dd-acts button{background:none;border:0;color:#0056b3;cursor:pointer;font-size:12px;font-weight:600;padding:2px}
+.dd-list{max-height:250px;overflow:auto}
+.dd-item{flex-direction:row!important;align-items:flex-start!important;gap:8px!important;font-weight:400!important;color:var(--tx)!important;font-size:12.5px!important;line-height:1.3;padding:5px 4px;border-radius:5px;cursor:pointer;text-align:left}
+.dd-item:hover{background:#eef2f7}.dd-item span{flex:1}.dd-item em{font-style:normal;color:var(--mu);font-size:11px;white-space:nowrap}
+#modal{position:fixed;inset:0;background:#0007;z-index:1000;align-items:center;justify-content:center}
+.m-box{background:#fff;border-radius:10px;padding:22px;width:min(560px,92vw);max-height:84vh;overflow:auto}
+.m-box h3{margin:0 0 4px;color:var(--az)}.m-box p{margin:0;font-size:12px;color:var(--mu)}
+.m-g{font-weight:700;color:var(--az);margin:14px 0 4px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.m-i{display:flex;gap:8px;font-size:13px;padding:3px 0;cursor:pointer}
+.m-act{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.print-head{display:none;margin-bottom:12px;font-size:12px;color:var(--mu)}
 #drop{border:2px dashed #0056b3;background:#eef2f7;border-radius:10px;padding:34px;text-align:center;color:var(--az);margin-bottom:18px;cursor:pointer}
 #drop.over{background:#dbe7f5}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
@@ -42,7 +58,7 @@ details label{flex-direction:row;font-weight:400;color:var(--tx);align-items:cen
 .warn{background:#fff8e1;border-left:4px solid #ffc107;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:14px}
 footer{text-align:center;font-size:12px;color:var(--mu);padding:20px}
 #app{display:none}
-@media print{nav,.bar,#drop,.noprint{display:none!important}body{background:#fff}.card{box-shadow:none;border:1px solid #ddd}.grid{grid-template-columns:1fr 1fr}}
+@page{margin:10mm}@media print{nav,.bar,#drop,.noprint,.warn,.hide-print,footer{display:none!important}body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}main{padding:0}.card{box-shadow:none;border:1px solid #ddd}.grid{grid-template-columns:1fr 1fr}.print-head{display:block}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -59,30 +75,34 @@ footer{text-align:center;font-size:12px;color:var(--mu);padding:20px}
 <div id="drop"><b>Arraste o CSV aqui</b> ou clique para selecionar<br><small>Relatório de Consultoria de Internação — Fonoaudiologia (.csv)</small>
 <input type="file" id="file" accept=".csv" hidden></div>
 
-<div id="app">
+<div id="app"><div class="print-head" id="ph"></div>
 <div class="bar">
   <label>Serviço<select id="f-serv"></select></label>
   <label>Área de atendimento
-    <details><summary id="f-area-t">Todas</summary><div>
-      <label><input type="checkbox" id="f-todas" checked> <b>Selecionar todas</b></label><hr><span id="f-areas"></span></div></details></label>
-  <label>Solicitadas de<input type="date" id="f-ini"></label>
+    <div class="dd"><button type="button" class="dd-btn" id="dd-btn"><span id="f-area-t">Todas as áreas</span></button>
+      <div class="dd-panel" id="dd-panel"><input type="search" id="dd-busca" placeholder="Buscar unidade...">
+        <div class="dd-acts"><button type="button" id="dd-all">Selecionar todas</button><button type="button" id="dd-none">Limpar</button></div>
+        <div class="dd-list" id="f-areas"></div></div></div></label>
+  <label>Atendimentos de<input type="date" id="f-ini"></label>
   <label>até<input type="date" id="f-fim"></label>
   <span style="display:flex;gap:6px">
     <button class="btn" data-d="7">7d</button><button class="btn" data-d="30">30d</button>
     <button class="btn" data-d="90">90d</button><button class="btn" data-d="0">Tudo</button></span>
-  <button class="btn pri noprint" onclick="window.print()">Imprimir / salvar PDF</button>
+  <button class="btn pri noprint" onclick="abrirPDF()">Gerar relatório PDF</button>
 </div>
 <div class="warn" id="aviso"></div>
 
 <div class="kpis" id="kpis"></div>
 
+<div class="card full"><h2>Linha do tempo: solicitadas × atendimentos realizados</h2>
+<p class="hint">Atendimentos = todas as evoluções (1ª consulta + acompanhamentos), pela data de cada registro. <span class="tl-g"></span></p><div class="wrap"><canvas id="c-tl"></canvas></div></div>
 <div class="card full"><h2>Linha do tempo: solicitadas × 1ª resposta</h2>
-<p class="hint" id="tl-hint"></p><div class="wrap"><canvas id="c-tl"></canvas></div></div>
+<p class="hint">Considera só a primeira resposta de cada consultoria. <span class="tl-g"></span></p><div class="wrap"><canvas id="c-tl2"></canvas></div></div>
 
 <div class="grid">
   <div class="card"><h2>Tempo até a 1ª resposta</h2><p class="hint">Distribuição por faixa de horas (só consultorias já respondidas)</p><div class="wrap"><canvas id="c-faixa"></canvas></div></div>
   <div class="card"><h2>Mediana do tempo de resposta por unidade (h)</h2><p class="hint">Apenas unidades com ≥ 2 consultorias respondidas</p><div class="wrap"><canvas id="c-unid"></canvas></div></div>
-  <div class="card"><h2>Consultorias por consultor</h2><p class="hint">Nomes anonimizados de forma estável</p><div class="wrap"><canvas id="c-cons"></canvas></div></div>
+  <div class="card"><h2>Atendimentos por consultor</h2><p class="hint">Nomes anonimizados de forma estável</p><div class="wrap"><canvas id="c-cons"></canvas></div></div>
   <div class="card"><h2>Demanda por dia da semana</h2><p class="hint">Pelo dia da solicitação</p><div class="wrap"><canvas id="c-dia"></canvas></div></div>
   <div class="card"><h2>Turno da solicitação</h2><p class="hint">Pelo horário da solicitação</p><div class="wrap"><canvas id="c-turno"></canvas></div></div>
   <div class="card"><h2>Especialidades solicitantes</h2><p class="hint">Top 7</p><div class="wrap"><canvas id="c-esp"></canvas></div></div>
@@ -91,11 +111,15 @@ footer{text-align:center;font-size:12px;color:var(--mu);padding:20px}
   <div class="card"><h2>Ventilação</h2><p class="hint">Lida do campo “Ventilação:” da evolução</p><div class="wrap"><canvas id="c-vent"></canvas></div></div>
   <div class="card"><h2>Nível assistencial</h2><p class="hint">Entre as respondidas</p><div class="wrap"><canvas id="c-niv"></canvas></div></div>
   <div class="card"><h2>FOIS registrado</h2><p class="hint">Último valor por consultoria (apenas onde foi identificado)</p><div class="wrap"><canvas id="c-fois"></canvas></div></div>
+  <div class="card"><h2>Evolução FOIS: 1ª × última consulta</h2><p class="hint" id="h-fe"></p><div class="wrap"><canvas id="c-fe"></canvas></div></div>
   <div class="card"><h2>AVC</h2><p class="hint">Classificação por texto — conferir amostra manualmente</p><div class="wrap"><canvas id="c-avc"></canvas></div></div>
 </div>
 
 <div class="card"><h2>Qualidade dos dados</h2><div class="qual" id="qual"></div></div>
 </div>
+<div id="modal" style="display:none"><div class="m-box"><h3>Gerar relatório em PDF</h3>
+<p>Marque o que deve aparecer. Os itens desmarcados não entram no relatório. Na janela de impressão, escolha “Salvar como PDF”.</p>
+<div id="m-list"></div><div class="m-act"><button class="btn" id="m-cancel" type="button">Cancelar</button><button class="btn pri" id="m-go" type="button">Gerar PDF</button></div></div></div>
 <footer>Dashboard desenvolvido por Fgo Marvin Azevedo</footer>
 </main>
 
@@ -105,7 +129,7 @@ Chart.defaults.font.family="'Segoe UI',sans-serif";
 Chart.defaults.plugins.datalabels.display=false;
 const ANONIMIZAR=true, MIN_N_UNIDADE=2, SLA_H=24;
 const COR=['#0056b3','#28a745','#ffc107','#dc3545','#6f42c1','#17a2b8','#fd7e14','#6c757d'];
-let TODAS=[], VIS=[];
+let TODAS=[], VIS=[], BASE=[];
 const $=id=>document.getElementById(id);
 
 /* ---------- utilidades ---------- */
@@ -117,6 +141,8 @@ const med=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=s.lengt
 const pct=(a,b)=>b?(100*a/b).toFixed(1).replace('.',',')+'%':'N/D';
 const cnt=(arr,f)=>arr.reduce((o,x)=>{const k=f(x);if(k!=null)o[k]=(o[k]||0)+1;return o},{});
 const num=v=>{const n=parseFloat(String(v||'').replace(',','.'));return isNaN(n)?null:n};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const bonito=s=>esc(s.toLowerCase().replace(/(^|[\s\-\/])([a-zà-ú])/g,(m,a,b)=>a+b.toUpperCase()).replace(/\b(Uti|Uv|Uio|Cti)\b/g,m=>m.toUpperCase()).replace(/\b(De|Da|Do|Dos|Das)\b/g,m=>m.toLowerCase()));
 
 /* ---------- extração de texto (tolerante a acentos e erros de digitação) ---------- */
 function campo(t,rotulo,max=45){ // pega o texto logo após "Rótulo:" até outro rótulo/asterisco
@@ -159,6 +185,7 @@ function enriquecer(rows){
       pac:(r.NOME_PACIENTE||'').trim(), serv:(r.ESP_CONSULTORA||'—').trim(), area:(r.LOCAL_ATEND||'—').trim(),
       esp:(r.ESP_ATENDIMENTO||'').trim(), cons:anon[(r.CONSULTOR||'').trim()]||null,
       sol:dIso(r.SOLIC_CONSULTORIA), h:hora(r.SOLIC_CONSULTORIA), r1:dIso(r.DATA_PRIMEIRA_RESPOSTA),
+      d:dIso(r.DTHR_RESPOSTA)||dIso(r.DATA_PRIMEIRA_RESPOSTA), key:(r.NOME_PACIENTE||'').trim()+'|'+(r.SOLIC_CONSULTORIA||''),
       tempo:resp?num(r.TEMPO_RESPOSTA_HORAS):null, resp,
       encerra:/ENCERRO\s+ESTA\s+CONSULTORIA/.test(txt),
       conselho:norm(r.CONSELHO_SOLIC), fois:resp?escala(txt,'FOIS'):null, asha:resp?escala(txt,'ASHA'):null,
@@ -170,20 +197,21 @@ function enriquecer(rows){
 function montarFiltros(){
   const servs=[...new Set(TODAS.map(x=>x.serv))].sort();
   $('f-serv').innerHTML='<option value="">Todos</option>'+servs.map(s=>`<option>${s}</option>`).join('');
-  const areas=[...new Set(TODAS.map(x=>x.area))].sort();
-  $('f-areas').innerHTML=areas.map(a=>`<label><input type="checkbox" class="ck" value="${a.replace(/"/g,'&quot;')}" checked> ${a}</label>`).join('');
-  const ds=TODAS.map(x=>x.sol).sort();$('f-ini').min=$('f-fim').min=ds[0];$('f-ini').max=$('f-fim').max=ds.at(-1);
+  const ca=cnt(TODAS,x=>x.area),areas=Object.keys(ca).sort((a,b)=>ca[b]-ca[a]||a.localeCompare(b));
+  $('f-areas').innerHTML=areas.map(a=>`<label class="dd-item" title="${esc(a)}"><input type="checkbox" class="ck" value="${esc(a)}" checked><span>${bonito(a)}</span><em>${ca[a]}</em></label>`).join('');
+  const ds=TODAS.flatMap(x=>[x.sol,x.d]).filter(Boolean).sort();$('f-ini').min=$('f-fim').min=ds[0];$('f-ini').max=$('f-fim').max=ds.at(-1);
 }
 function filtrar(){
   const cks=[...document.querySelectorAll('.ck')],on=cks.filter(c=>c.checked).map(c=>c.value);
-  $('f-todas').checked=on.length==cks.length;
-  $('f-area-t').textContent=on.length==cks.length?'Todas':on.length?on.length+' selecionada(s)':'Nenhuma';
+  $('f-area-t').innerHTML=on.length==cks.length?'Todas as áreas':on.length==1?bonito(on[0]):on.length?on.length+' áreas selecionadas':'Nenhuma área';
   const s=$('f-serv').value,i=$('f-ini').value,f=$('f-fim').value;
-  VIS=TODAS.filter(x=>(!s||x.serv==s)&&on.includes(x.area)&&(!i||x.sol>=i)&&(!f||x.sol<=f));
+  BASE=TODAS.filter(x=>(!s||x.serv==s)&&on.includes(x.area));
+  // período = data do atendimento (consultorias ainda sem resposta usam a data da solicitação)
+  VIS=BASE.filter(x=>{const d=x.d||x.sol;return (!i||d>=i)&&(!f||d<=f)});
   render();
 }
 function preset(d){
-  const max=TODAS.map(x=>x.sol).sort().at(-1);
+  const max=TODAS.flatMap(x=>[x.sol,x.d]).filter(Boolean).sort().at(-1);
   if(!+d){$('f-ini').value=$('f-fim').value='';}
   else{const e=new Date(max+'T00:00:00');e.setDate(e.getDate()-(+d-1));$('f-ini').value=e.toISOString().slice(0,10);$('f-fim').value=max}
   filtrar();
@@ -205,72 +233,111 @@ function donut(id,labels,data){
 }
 const ord=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]);
 
+function consol(rows){const M=new Map();rows.forEach(x=>{const o=M.get(x.key);if(!o)M.set(x.key,{...x});else if(x.resp&&!o.resp)Object.assign(o,{resp:true,r1:x.r1,tempo:x.tempo})});return [...M.values()]}
 function render(){
-  const D=VIS, R=D.filter(x=>x.resp), tempos=R.map(x=>x.tempo).filter(t=>t!=null);
-  const pend=D.filter(x=>!x.resp).length, enc=R.filter(x=>x.encerra).length;
-  const pac=new Set(D.map(x=>x.pac)).size;
+  const D=VIS, R=D.filter(x=>x.resp);
+  // consultoria = paciente + data/hora da solicitação (evita contar a mesma solicitação várias vezes)
+  const M=new Map();D.forEach(x=>{const o=M.get(x.key);if(!o)M.set(x.key,{...x});else if(x.resp&&!o.resp)Object.assign(o,{resp:true,r1:x.r1,tempo:x.tempo})});
+  const C1=[...M.values()], tempos=C1.map(x=>x.resp?x.tempo:null).filter(t=>t!=null);
+  const pend=C1.filter(x=>!x.resp).length, enc=R.filter(x=>x.encerra).length;
+  const pac=new Set(D.map(x=>x.pac)).size, pacAt=new Set(R.map(x=>x.pac)).size;
   const sla=tempos.filter(t=>t<=SLA_H).length;
   const p90=tempos.length?[...tempos].sort((a,b)=>a-b)[Math.ceil(.9*tempos.length)-1]:null;
-  const tq=R.filter(x=>x.tqt).length;
+  const tqP=new Set(R.filter(x=>x.tqt).map(x=>x.pac)).size;
   // evolução por paciente (precisa de ≥2 registros com a escala)
-  const porPac={};D.filter(x=>x.resp).sort((a,b)=>a.sol<b.sol?-1:1).forEach(x=>(porPac[x.pac]=porPac[x.pac]||[]).push(x));
+  const porPac={};D.filter(x=>x.resp).sort((a,b)=>(a.d||a.sol)<(b.d||b.sol)?-1:(a.d||a.sol)>(b.d||b.sol)?1:0).forEach(x=>(porPac[x.pac]=porPac[x.pac]||[]).push(x));
   const dl=k=>Object.values(porPac).map(a=>a.filter(x=>x[k]!=null)).filter(a=>a.length>=2).map(a=>a.at(-1)[k]-a[0][k]);
   const dF=dl('fois'),dA=dl('asha'),avg=a=>a.length?(a.reduce((x,y)=>x+y,0)/a.length):null;
+  const fx=Object.values(porPac).map(a=>a.filter(x=>x.fois!=null)).filter(a=>a.length>=2);
+  const fz=n=>n<=3?0:n==4?1:2, fen=[0,0,0], fsa=[0,0,0];fx.forEach(a=>{fen[fz(a[0].fois)]++;fsa[fz(a.at(-1).fois)]++});
   const sg=v=>v==null?'N/D':(v>0?'+':'')+v.toFixed(2).replace('.',',');
   const K=[
-    ['Solicitações',D.length,`${pac} pacientes distintos`,'#0056b3'],
-    ['Pendentes (sem resposta)',pend,pct(pend,D.length)+' das solicitadas',pend?'#dc3545':'#28a745'],
+    ['Solicitações (consultorias)',C1.length,`${pac} pacientes distintos`,'#0056b3'],
+    ['Atendimentos realizados',R.length,'1ª consulta + acompanhamentos','#28a745'],
+    ['Pendentes (sem resposta)',pend,pct(pend,C1.length)+' das solicitadas',pend?'#dc3545':'#28a745'],
     [`Respondidas em ≤ ${SLA_H}h`,pct(sla,tempos.length),`${sla} de ${tempos.length} respondidas`,'#17a2b8'],
     ['Tempo de 1ª resposta (mediana)',med(tempos)==null?'N/D':med(tempos)+' h','P90: '+(p90==null?'N/D':p90+' h')+' · média '+(tempos.length?(tempos.reduce((a,b)=>a+b,0)/tempos.length).toFixed(1).replace('.',','):'N/D')+' h','#ffc107'],
-    ['Consultorias / paciente',pac?(D.length/pac).toFixed(2).replace('.',','):'N/D','nº de consultorias, não de sessões','#fd7e14'],
-    ['Com traqueostomia',pct(tq,R.length),`${tq} de ${R.length} respondidas`,'#e83e8c'],
+    ['Consultas / paciente',pacAt?(R.length/pacAt).toFixed(2).replace('.',','):'N/D',`${R.length} atendimentos · ${pacAt} pacientes`,'#fd7e14'],
+    ['Pacientes com traqueostomia',pct(tqP,pacAt),`${tqP} de ${pacAt} pacientes atendidos`,'#e83e8c'],
     ['Encerradas (transferência)',enc,pct(enc,R.length)+' das respondidas','#6c757d'],
     ['Δ FOIS médio',sg(avg(dF)),`n = ${dF.length} pacientes com ≥2 registros`,'#6f42c1'],
     ['Δ ASHA NOMS médio',sg(avg(dA)),`n = ${dA.length} pacientes com ≥2 registros`,'#20c997']];
   $('kpis').innerHTML=K.map(([t,v,s,c])=>`<div class="card kpi" style="--c:${c}"><h3>${t}</h3><p>${v}</p><small>${s}</small></div>`).join('');
 
   // linha do tempo com dias sem movimento preenchidos (e semana quando o intervalo é longo)
-  const datas=D.flatMap(x=>[x.sol,x.r1]).filter(Boolean).sort();
+  // linhas do tempo usam todos os registros do serviço/área e só recortam o eixo no período escolhido
+  const C1b=consol(BASE), Rb=BASE.filter(x=>x.resp), fi=$('f-ini').value, ff=$('f-fim').value;
+  const datas=BASE.flatMap(x=>[x.sol,x.r1,x.d]).filter(Boolean).sort();
   if(datas.length){
-    const ini=new Date(datas[0]+'T00:00:00'),fim=new Date(datas.at(-1)+'T00:00:00'),dias=(fim-ini)/864e5;
+    const ini=new Date((fi||datas[0])+'T00:00:00'),fim=new Date((ff||datas.at(-1))+'T00:00:00'),dias=(fim-ini)/864e5;
     const sem=dias>90, chave=iso=>{if(!sem)return iso;const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return d.toISOString().slice(0,10)};
-    const A={},B={},L=[];
+    const A={},B={},T={},L=[];
     for(let d=new Date(ini);d<=fim;d.setDate(d.getDate()+(sem?7:1))){
       const k=chave(d.toISOString().slice(0,10));if(!L.includes(k))L.push(k)}
-    D.forEach(x=>{A[chave(x.sol)]=(A[chave(x.sol)]||0)+1;if(x.r1)B[chave(x.r1)]=(B[chave(x.r1)]||0)+1});
-    $('tl-hint').textContent=sem?'Agrupado por semana (início na segunda-feira)':'Agrupado por dia';
-    G('c-tl',{type:'line',data:{labels:L.map(fmt),datasets:[
+    C1b.forEach(x=>{A[chave(x.sol)]=(A[chave(x.sol)]||0)+1;if(x.resp&&x.r1)B[chave(x.r1)]=(B[chave(x.r1)]||0)+1});
+    Rb.forEach(x=>{const k=x.d||x.r1;if(k)T[chave(k)]=(T[chave(k)]||0)+1});
+    document.querySelectorAll('.tl-g').forEach(e=>e.textContent=sem?'Agrupado por semana (início na segunda).':'Agrupado por dia.');
+    [['c-tl','Atendimentos realizados',T],['c-tl2','1ª resposta',B]].forEach(([id,nm,S])=>G(id,{type:'line',data:{labels:L.map(fmt),datasets:[
       {label:'Solicitadas',data:L.map(k=>A[k]||0),borderColor:COR[3],backgroundColor:'#dc354518',fill:true,tension:.3},
-      {label:'1ª resposta',data:L.map(k=>B[k]||0),borderColor:COR[1],backgroundColor:'#28a74518',fill:true,tension:.3}]},
-      options:OPT({plugins:{legend:{display:true,position:'top'},datalabels:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}})});
+      {label:nm,data:L.map(k=>S[k]||0),borderColor:COR[1],backgroundColor:'#28a74518',fill:true,tension:.3}]},
+      options:OPT({plugins:{legend:{display:true,position:'top'},datalabels:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}})}));
   }
 
   const faixas=[['≤ 2h',0,2],['2–6h',2,6],['6–12h',6,12],['12–24h',12,24],['24–48h',24,48],['> 48h',48,1e9]];
   bar('c-faixa',faixas.map(f=>f[0]),faixas.map(([,a,b])=>tempos.filter(t=>t>a&&t<=b||(a==0&&t==0)).length),{cor:faixas.map((_,i)=>i<4?COR[1]:i==4?COR[2]:COR[3])});
-  const un={};R.forEach(x=>{if(x.tempo!=null)(un[x.area]=un[x.area]||[]).push(x.tempo)});
+  const un={};C1.filter(x=>x.resp).forEach(x=>{if(x.tempo!=null)(un[x.area]=un[x.area]||[]).push(x.tempo)});
   const U=Object.entries(un).filter(([,a])=>a.length>=MIN_N_UNIDADE).map(([k,a])=>[k,med(a)]).sort((a,b)=>b[1]-a[1]).slice(0,8);
   bar('c-unid',U.map(u=>u[0]),U.map(u=>u[1]),{h:true,cor:COR[3]});
-  const C=ord(cnt(D.filter(x=>x.cons),x=>x.cons));bar('c-cons',C.map(c=>c[0]),C.map(c=>c[1]),{h:true});
-  const ND=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'],dia=cnt(D,x=>ND[new Date(x.sol+'T00:00:00').getDay()]);
+  const C=ord(cnt(R.filter(x=>x.cons),x=>x.cons));bar('c-cons',C.map(c=>c[0]),C.map(c=>c[1]),{h:true});
+  const ND=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'],dia=cnt(C1,x=>ND[new Date(x.sol+'T00:00:00').getDay()]);
   const ordDia=ND.slice(1).concat(ND[0]);bar('c-dia',ordDia,ordDia.map(d=>dia[d]||0));
-  const tn=cnt(D.filter(x=>x.h!=null),x=>x.h>=7&&x.h<=12?'Manhã (07–12h)':x.h>=13&&x.h<=18?'Tarde (13–18h)':'Noite (19–06h)');
+  const tn=cnt(C1.filter(x=>x.h!=null),x=>x.h>=7&&x.h<=12?'Manhã (07–12h)':x.h>=13&&x.h<=18?'Tarde (13–18h)':'Noite (19–06h)');
   donut('c-turno',Object.keys(tn),Object.values(tn));
-  const E=ord(cnt(D.filter(x=>x.esp),x=>x.esp)).slice(0,7);bar('c-esp',E.map(e=>e[0]),E.map(e=>e[1]),{h:true,cor:COR[5]});
-  const so=cnt(D,x=>x.conselho.includes('CREMERS')?'Médicos':x.conselho.includes('COREN')?'Enfermeiros':'Outros');donut('c-sol',Object.keys(so),Object.values(so));
+  const E=ord(cnt(C1.filter(x=>x.esp),x=>x.esp)).slice(0,7);bar('c-esp',E.map(e=>e[0]),E.map(e=>e[1]),{h:true,cor:COR[5]});
+  const so=cnt(C1,x=>x.conselho.includes('CREMERS')?'Médicos':x.conselho.includes('COREN')?'Enfermeiros':'Outros');donut('c-sol',Object.keys(so),Object.values(so));
   const vi=cnt(R,x=>x.via);donut('c-via',Object.keys(vi),Object.values(vi));
   const ve=cnt(R,x=>x.vent);donut('c-vent',Object.keys(ve),Object.values(ve));
   const nv=cnt(R,x=>x.niv),nk=['Alto','Médio','Baixo','Não informado'];
   bar('c-niv',nk,nk.map(k=>nv[k]||0),{cor:[COR[3],COR[2],COR[1],'#adb5bd']});
   const fo=cnt(R.filter(x=>x.fois!=null),x=>x.fois);bar('c-fois',[1,2,3,4,5,6,7].map(n=>'FOIS '+n),[1,2,3,4,5,6,7].map(n=>fo[n]||0),{cor:[1,2,3,4,5,6,7].map(n=>n<=3?COR[3]:n<=5?COR[2]:COR[1])});
+  G('c-fe',{type:'bar',data:{labels:['FOIS 1–3','FOIS 4','FOIS 5–7'],datasets:[{label:'1ª consulta',data:fen,backgroundColor:COR[3],borderRadius:4},{label:'Última consulta',data:fsa,backgroundColor:COR[1],borderRadius:4}]},
+    options:OPT({layout:{padding:{top:18}},plugins:{legend:{display:true,position:'top'},datalabels:{display:true,anchor:'end',align:'end',font:{weight:'bold',size:11}}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}})});
+  $('h-fe').textContent=`Pacientes com FOIS registrado em ≥ 2 consultas (n = ${fx.length})`;
   const av=cnt(R,x=>x.avc);donut('c-avc',Object.keys(av),Object.values(av));
 
   // qualidade dos dados
   const cob=(f)=>`${R.filter(f).length} de ${R.length} (${pct(R.filter(f).length,R.length)})`;
-  $('qual').innerHTML=`Registros no filtro: <b>${D.length}</b> · respondidos: <b>${R.length}</b> · pendentes: <b>${pend}</b><br>
+  $('qual').innerHTML=`Linhas no filtro: <b>${D.length}</b> · atendimentos realizados: <b>${R.length}</b> · consultorias: <b>${C1.length}</b> · pendentes: <b>${pend}</b><br>
   FOIS identificado em ${cob(x=>x.fois!=null)} · ASHA NOMS em ${cob(x=>x.asha!=null)}<br>
   Nível assistencial em ${cob(x=>x.niv!=='Não informado')} · Via de alimentação em ${cob(x=>x.via!=='Não identificada')} · Ventilação em ${cob(x=>x.vent!=='Não identificada')}<br>
   Percentuais de FOIS/via/ventilação dependem de o texto seguir o modelo de evolução (campos rotulados). Quanto menor a cobertura, mais cautela ao interpretar.`;
 }
+
+/* ---------- relatório PDF com escolha de itens ---------- */
+const OCULTOS=new Set(), GK='Indicadores (KPIs)', GG='Gráficos e painéis';
+function itensRel(){
+  const k=[...document.querySelectorAll('#kpis .kpi')].map(el=>({el,nome:el.querySelector('h3').textContent,g:GK}));
+  const c=[...document.querySelectorAll('#app .card:not(.kpi)')].map(el=>({el,nome:el.querySelector('h2').textContent,g:GG}));
+  return k.concat(c)}
+function abrirPDF(){
+  const it=itensRel(),L=$('m-list');L.innerHTML='';
+  [GK,GG].forEach(g=>{
+    L.insertAdjacentHTML('beforeend',`<div class="m-g">${g}<span><button type="button" class="lnk" data-g="${g}" data-v="1">marcar todos</button> · <button type="button" class="lnk" data-g="${g}" data-v="0">desmarcar todos</button></span></div>`);
+    it.filter(i=>i.g===g).forEach(i=>{const lb=document.createElement('label'),cb=document.createElement('input');
+      lb.className='m-i';cb.type='checkbox';cb.dataset.g=g;cb.dataset.n=i.nome;cb.checked=!OCULTOS.has(i.nome);lb.append(cb,i.nome);L.append(lb)})});
+  $('modal').style.display='flex'}
+function resumoFiltros(){
+  const s=$('f-serv').value||'todos os serviços',i=$('f-ini').value,f=$('f-fim').value;
+  return `Serviço: ${s} · Áreas: ${$('f-area-t').textContent} · Atendimentos de: ${i||f?(i?fmt(i):'início')+' a '+(f?fmt(f):'fim'):'todo o período'}`}
+function gerarPDF(){
+  const cbs=[...document.querySelectorAll('#m-list input')];
+  if(!cbs.some(c=>c.checked)){alert('Marque ao menos um item.');return}
+  OCULTOS.clear();cbs.forEach(c=>{if(!c.checked)OCULTOS.add(c.dataset.n)});
+  $('modal').style.display='none';
+  itensRel().forEach(i=>i.el.classList.toggle('hide-print',OCULTOS.has(i.nome)));
+  $('ph').innerHTML=`<b>Gestão Fonoaudiologia — HCPA</b> · gerado em ${new Date().toLocaleDateString('pt-BR')}<br>${resumoFiltros()}`;
+  Object.values(Chart.instances).forEach(c=>c.resize());
+  setTimeout(()=>window.print(),300)}
 
 /* ---------- carga do CSV ---------- */
 function carregar(file){
@@ -291,7 +358,15 @@ $('file').onchange=e=>carregar(e.target.files[0]);
 $('drop').addEventListener('drop',e=>carregar(e.dataTransfer.files[0]));
 ['f-serv','f-ini','f-fim'].forEach(id=>$(id).onchange=filtrar);
 $('f-areas').onchange=filtrar;
-$('f-todas').onchange=e=>{document.querySelectorAll('.ck').forEach(c=>c.checked=e.target.checked);filtrar()};
+$('dd-btn').onclick=e=>{e.stopPropagation();$('dd-panel').classList.toggle('open')};
+document.addEventListener('click',e=>{if(!e.target.closest('.dd'))$('dd-panel').classList.remove('open')});
+const setAll=v=>{document.querySelectorAll('.ck').forEach(c=>{if(c.closest('.dd-item').style.display!=='none')c.checked=v});filtrar()};
+$('dd-all').onclick=()=>setAll(true);$('dd-none').onclick=()=>setAll(false);
+$('dd-busca').oninput=e=>{const t=norm(e.target.value);document.querySelectorAll('.dd-item').forEach(l=>l.style.display=norm(l.title).includes(t)?'':'none')};
+$('m-list').onclick=e=>{const b=e.target.closest('.lnk');if(b)document.querySelectorAll('#m-list input').forEach(c=>{if(c.dataset.g===b.dataset.g)c.checked=b.dataset.v=='1'})};
+$('m-cancel').onclick=()=>$('modal').style.display='none';
+$('m-go').onclick=gerarPDF;
+window.addEventListener('afterprint',()=>document.querySelectorAll('.hide-print').forEach(e=>e.classList.remove('hide-print')));
 document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>preset(b.dataset.d));
 </script>
 </body>
