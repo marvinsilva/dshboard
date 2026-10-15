@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Fonoaudiologia - HCPA</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+:root{--az:#004085;--bg:#f0f2f5;--tx:#1c1e21;--mu:#6c757d;--card:#fff}
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;margin:0;background:var(--bg);color:var(--tx)}
+nav{background:var(--az);color:#fff;padding:0 24px;box-shadow:0 2px 8px #0003}
+nav div{max-width:1400px;margin:auto;height:52px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+nav a{color:#ffffffcc;text-decoration:none;font-size:14px;font-weight:600;padding:7px 12px;border-radius:6px}
+nav a.on,nav a:hover{background:#ffffff33;color:#fff}
+main{max-width:1400px;margin:auto;padding:24px}
+h1{color:var(--az);margin:0 0 4px;font-size:25px}
+.sub{color:var(--mu);font-size:13px;margin:0 0 18px}
+.card{background:var(--card);border-radius:10px;box-shadow:0 2px 8px #0000000f;padding:16px 18px;break-inside:avoid}
+.card h2{font-size:15px;color:var(--az);margin:0 0 4px}
+.card .hint{font-size:12px;color:var(--mu);margin:0 0 10px}
+.bar{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-bottom:18px}
+.bar label{display:flex;flex-direction:column;font-size:12px;font-weight:700;color:var(--az);gap:5px}
+.bar select,.bar input[type=date],.btn,summary{padding:8px 11px;border:1px solid #ced4da;border-radius:6px;font-size:13px;background:#fff;font-family:inherit}
+.btn{cursor:pointer;font-weight:600}.btn:hover{background:#e9ecef}
+.btn.pri{background:var(--az);color:#fff;border-color:var(--az)}
+details{position:relative}summary{cursor:pointer;list-style:none;min-width:200px}
+details>div{position:absolute;z-index:20;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 8px 16px #0002;padding:10px;max-height:260px;overflow:auto;min-width:300px;margin-top:4px}
+details label{flex-direction:row;font-weight:400;color:var(--tx);align-items:center;padding:3px}
+#drop{border:2px dashed #0056b3;background:#eef2f7;border-radius:10px;padding:34px;text-align:center;color:var(--az);margin-bottom:18px;cursor:pointer}
+#drop.over{background:#dbe7f5}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.kpi{border-left:5px solid var(--c,#0056b3)}
+.kpi h3{margin:0 0 6px;font-size:12px;color:var(--mu);font-weight:600}
+.kpi p{margin:0;font-size:26px;font-weight:700}
+.kpi small{display:block;font-size:11px;color:var(--mu);margin-top:3px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px;margin-bottom:14px}
+.full{margin-bottom:14px}
+.wrap{position:relative;height:280px}
+.qual{font-size:12px;color:var(--mu);line-height:1.7}
+.qual b{color:var(--tx)}
+.warn{background:#fff8e1;border-left:4px solid #ffc107;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:14px}
+footer{text-align:center;font-size:12px;color:var(--mu);padding:20px}
+#app{display:none}
+@media print{nav,.bar,#drop,.noprint{display:none!important}body{background:#fff}.card{box-shadow:none;border:1px solid #ddd}.grid{grid-template-columns:1fr 1fr}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+</head>
+<body>
+<nav><div><b>Gestão Fonoaudiologia — HCPA</b><span>
+<a class="on" href="https://marvinsilva.github.io/dashboardfono/">Dashboard Gestão</a>
+<a href="https://marvinsilva.github.io/disfagiaadulto/">Indicadores de Altas</a></span></div></nav>
+<main>
+<h1>Gestão Fonoaudiologia — HCPA</h1>
+<p class="sub">Painel baseado no relatório de consultorias do AGHUSE. Os dados são processados apenas no seu navegador (nada é enviado a servidor).</p>
+
+<div id="drop"><b>Arraste o CSV aqui</b> ou clique para selecionar<br><small>Relatório de Consultoria de Internação — Fonoaudiologia (.csv)</small>
+<input type="file" id="file" accept=".csv" hidden></div>
+
+<div id="app">
+<div class="bar">
+  <label>Serviço<select id="f-serv"></select></label>
+  <label>Área de atendimento
+    <details><summary id="f-area-t">Todas</summary><div>
+      <label><input type="checkbox" id="f-todas" checked> <b>Selecionar todas</b></label><hr><span id="f-areas"></span></div></details></label>
+  <label>Solicitadas de<input type="date" id="f-ini"></label>
+  <label>até<input type="date" id="f-fim"></label>
+  <span style="display:flex;gap:6px">
+    <button class="btn" data-d="7">7d</button><button class="btn" data-d="30">30d</button>
+    <button class="btn" data-d="90">90d</button><button class="btn" data-d="0">Tudo</button></span>
+  <button class="btn pri noprint" onclick="window.print()">Imprimir / salvar PDF</button>
+</div>
+<div class="warn" id="aviso"></div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="card full"><h2>Linha do tempo: solicitadas × 1ª resposta</h2>
+<p class="hint" id="tl-hint"></p><div class="wrap"><canvas id="c-tl"></canvas></div></div>
+
+<div class="grid">
+  <div class="card"><h2>Tempo até a 1ª resposta</h2><p class="hint">Distribuição por faixa de horas (só consultorias já respondidas)</p><div class="wrap"><canvas id="c-faixa"></canvas></div></div>
+  <div class="card"><h2>Mediana do tempo de resposta por unidade (h)</h2><p class="hint">Apenas unidades com ≥ 2 consultorias respondidas</p><div class="wrap"><canvas id="c-unid"></canvas></div></div>
+  <div class="card"><h2>Consultorias por consultor</h2><p class="hint">Nomes anonimizados de forma estável</p><div class="wrap"><canvas id="c-cons"></canvas></div></div>
+  <div class="card"><h2>Demanda por dia da semana</h2><p class="hint">Pelo dia da solicitação</p><div class="wrap"><canvas id="c-dia"></canvas></div></div>
+  <div class="card"><h2>Turno da solicitação</h2><p class="hint">Pelo horário da solicitação</p><div class="wrap"><canvas id="c-turno"></canvas></div></div>
+  <div class="card"><h2>Especialidades solicitantes</h2><p class="hint">Top 7</p><div class="wrap"><canvas id="c-esp"></canvas></div></div>
+  <div class="card"><h2>Perfil do solicitante</h2><p class="hint">Pelo conselho profissional</p><div class="wrap"><canvas id="c-sol"></canvas></div></div>
+  <div class="card"><h2>Via de alimentação</h2><p class="hint">Lida do campo “Via de alimentação:” da evolução</p><div class="wrap"><canvas id="c-via"></canvas></div></div>
+  <div class="card"><h2>Ventilação</h2><p class="hint">Lida do campo “Ventilação:” da evolução</p><div class="wrap"><canvas id="c-vent"></canvas></div></div>
+  <div class="card"><h2>Nível assistencial</h2><p class="hint">Entre as respondidas</p><div class="wrap"><canvas id="c-niv"></canvas></div></div>
+  <div class="card"><h2>FOIS registrado</h2><p class="hint">Último valor por consultoria (apenas onde foi identificado)</p><div class="wrap"><canvas id="c-fois"></canvas></div></div>
+  <div class="card"><h2>AVC</h2><p class="hint">Classificação por texto — conferir amostra manualmente</p><div class="wrap"><canvas id="c-avc"></canvas></div></div>
+</div>
+
+<div class="card"><h2>Qualidade dos dados</h2><div class="qual" id="qual"></div></div>
+</div>
+<footer>Dashboard desenvolvido por Fgo Marvin Azevedo</footer>
+</main>
+
+<script>
+Chart.register(ChartDataLabels);
+Chart.defaults.font.family="'Segoe UI',sans-serif";
+Chart.defaults.plugins.datalabels.display=false;
+const ANONIMIZAR=true, MIN_N_UNIDADE=2, SLA_H=24;
+const COR=['#0056b3','#28a745','#ffc107','#dc3545','#6f42c1','#17a2b8','#fd7e14','#6c757d'];
+let TODAS=[], VIS=[];
+const $=id=>document.getElementById(id);
+
+/* ---------- utilidades ---------- */
+const norm=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+const dIso=s=>{const m=String(s||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?`${m[3].length==2?'20'+m[3]:m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:null};
+const hora=s=>{const m=String(s||'').match(/\s(\d{1,2}):/);return m?+m[1]:null};
+const fmt=iso=>iso.split('-').reverse().join('/');
+const med=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const pct=(a,b)=>b?(100*a/b).toFixed(1).replace('.',',')+'%':'N/D';
+const cnt=(arr,f)=>arr.reduce((o,x)=>{const k=f(x);if(k!=null)o[k]=(o[k]||0)+1;return o},{});
+const num=v=>{const n=parseFloat(String(v||'').replace(',','.'));return isNaN(n)?null:n};
+
+/* ---------- extração de texto (tolerante a acentos e erros de digitação) ---------- */
+function campo(t,rotulo,max=45){ // pega o texto logo após "Rótulo:" até outro rótulo/asterisco
+  const m=t.match(new RegExp(rotulo+'[^:\\n]{0,40}:\\s*([^*\\n]{0,'+max+'})'));return m?m[1]:null}
+function escala(t,nome){const m=t.match(new RegExp(nome+'[^\\d\\/\\.\\n]{0,15}\\b([1-7])\\b'));return m?+m[1]:null}
+function via(t){
+  const c=campo(t,'VIA DE ALIMENTACAO');if(!c)return 'Não identificada';
+  const sonda=/\b(SNE|SNG|SNT|SOE|SONDA)\b/.test(c),vo=/\b(VO|ORAL|PASTOS|LIQUID|BRAND|NORMAL)/.test(c);
+  if(/\bGTT|GASTROSTOMIA/.test(c))return 'GTT';
+  if(sonda&&vo)return 'Mista (sonda + VO)';
+  if(sonda)return 'Sonda (SNE/SNG)';
+  if(/\b(NPT|NPO|ZERO|JEJUM)\b/.test(c))return vo?'Mista (NPT + VO)':'Zero / NPT';
+  return vo?'Via oral':'Não identificada'}
+function vent(t){
+  const c=campo(t,'VENTILACAO',30);if(!c)return 'Não identificada';
+  if(/\b(VM|IOT|TOT|TUBO|MECANICA)\b/.test(c))return 'VM / IOT';
+  if(/\bTQT|TRAQUEO/.test(c))return 'TQT';
+  if(/\b(AA|AR AMBIENTE|ESPONTANEA|CATETER|MASCARA)\b/.test(c))return 'Ar ambiente / espontânea';
+  return 'Não identificada'}
+const temTQT=(t,v)=>v==='TQT'||(/\b(TQT|TRAQUEOSTOMIZAD[OA])\b/.test(t)&&!/\b(SEM|DECANUL\w*|PRE|NAO)\s+(TQT|TRAQUEO\w*)/.test(t));
+const nivel=t=>{const m=t.match(/NIVEL\s+ASSIS?TENCIAL[\s:\-=]*(ALTO|MEDIO|BAIXO)/);return m?{ALTO:'Alto',MEDIO:'Médio',BAIXO:'Baixo'}[m[1]]:'Não informado'};
+function avc(raw){
+  const t=String(raw||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const R=/\b(avci?|avch?|avei?|aveh?|ait|acidente vascular (cerebral|encefalico)|ictus)\b/;
+  if(!R.test(t))return 'Sem AVC';
+  const pas=/\b(previo|previa|antigo|antiga|sequelas?|historico|pregresso|hmp|antecedentes?)\b|\(\s*\d{4}\s*\)|\bha\s+\d+\s+(anos|meses)\b/;
+  const agu=/\b(agudo|aguda|recente|subagudo|atual|hda|novo|nova|recorrente)\b|\bha\s+\d+\s+(dias|horas)\b/;
+  let a=false,p=false;
+  for(const s of t.split(/[.;\n,\/]/))if(R.test(s)){if(agu.test(s)||!pas.test(s))a=true;else p=true}
+  return a?'AVC agudo/atual':p?'AVC prévio':'Sem AVC'}
+
+/* ---------- enriquecimento de cada linha ---------- */
+function enriquecer(rows){
+  const nomes=[...new Set(rows.map(r=>(r.CONSULTOR||'').trim()).filter(Boolean))].sort();
+  const anon=Object.fromEntries(nomes.map((n,i)=>[n,ANONIMIZAR?'Fonoaudiólogo '+(i+1):n]));
+  return rows.map(r=>{
+    const txt=norm(r.RESPOSTA), resp=!!(r.DATA_PRIMEIRA_RESPOSTA||'').trim();
+    const v=resp?vent(txt):null;
+    return {
+      pac:(r.NOME_PACIENTE||'').trim(), serv:(r.ESP_CONSULTORA||'—').trim(), area:(r.LOCAL_ATEND||'—').trim(),
+      esp:(r.ESP_ATENDIMENTO||'').trim(), cons:anon[(r.CONSULTOR||'').trim()]||null,
+      sol:dIso(r.SOLIC_CONSULTORIA), h:hora(r.SOLIC_CONSULTORIA), r1:dIso(r.DATA_PRIMEIRA_RESPOSTA),
+      tempo:resp?num(r.TEMPO_RESPOSTA_HORAS):null, resp,
+      encerra:/ENCERRO\s+ESTA\s+CONSULTORIA/.test(txt),
+      conselho:norm(r.CONSELHO_SOLIC), fois:resp?escala(txt,'FOIS'):null, asha:resp?escala(txt,'ASHA'):null,
+      via:resp?via(txt):null, vent:v, tqt:resp?temTQT(txt,v):false, niv:resp?nivel(txt):null, avc:resp?avc(r.RESPOSTA):null}
+  }).filter(x=>x.sol);
+}
+
+/* ---------- filtros ---------- */
+function montarFiltros(){
+  const servs=[...new Set(TODAS.map(x=>x.serv))].sort();
+  $('f-serv').innerHTML='<option value="">Todos</option>'+servs.map(s=>`<option>${s}</option>`).join('');
+  const areas=[...new Set(TODAS.map(x=>x.area))].sort();
+  $('f-areas').innerHTML=areas.map(a=>`<label><input type="checkbox" class="ck" value="${a.replace(/"/g,'&quot;')}" checked> ${a}</label>`).join('');
+  const ds=TODAS.map(x=>x.sol).sort();$('f-ini').min=$('f-fim').min=ds[0];$('f-ini').max=$('f-fim').max=ds.at(-1);
+}
+function filtrar(){
+  const cks=[...document.querySelectorAll('.ck')],on=cks.filter(c=>c.checked).map(c=>c.value);
+  $('f-todas').checked=on.length==cks.length;
+  $('f-area-t').textContent=on.length==cks.length?'Todas':on.length?on.length+' selecionada(s)':'Nenhuma';
+  const s=$('f-serv').value,i=$('f-ini').value,f=$('f-fim').value;
+  VIS=TODAS.filter(x=>(!s||x.serv==s)&&on.includes(x.area)&&(!i||x.sol>=i)&&(!f||x.sol<=f));
+  render();
+}
+function preset(d){
+  const max=TODAS.map(x=>x.sol).sort().at(-1);
+  if(!+d){$('f-ini').value=$('f-fim').value='';}
+  else{const e=new Date(max+'T00:00:00');e.setDate(e.getDate()-(+d-1));$('f-ini').value=e.toISOString().slice(0,10);$('f-fim').value=max}
+  filtrar();
+}
+
+/* ---------- gráficos ---------- */
+function G(id,cfg){const c=Chart.getChart(id);if(c)c.destroy();new Chart($(id),cfg)}
+const OPT=(extra={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false}},...extra});
+function bar(id,labels,data,{h=false,cor=COR[0],fmtv=v=>v}={}){
+  G(id,{type:'bar',data:{labels,datasets:[{data,backgroundColor:cor,borderRadius:4}]},
+    options:OPT({indexAxis:h?'y':'x',scales:{[h?'x':'y']:{beginAtZero:true,ticks:{precision:0}}},
+      plugins:{legend:{display:false},datalabels:{display:true,anchor:'end',align:'end',font:{weight:'bold',size:11},formatter:fmtv}},layout:{padding:{right:h?28:0,top:h?0:18}}})});
+}
+function donut(id,labels,data){
+  const tot=data.reduce((a,b)=>a+b,0);
+  G(id,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:COR}]},
+    options:OPT({plugins:{legend:{display:true,position:'right'},datalabels:{display:true,color:'#fff',font:{weight:'bold',size:11},
+      formatter:v=>tot&&v/tot>=.06?Math.round(100*v/tot)+'%':''}}})});
+}
+const ord=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]);
+
+function render(){
+  const D=VIS, R=D.filter(x=>x.resp), tempos=R.map(x=>x.tempo).filter(t=>t!=null);
+  const pend=D.filter(x=>!x.resp).length, enc=R.filter(x=>x.encerra).length;
+  const pac=new Set(D.map(x=>x.pac)).size;
+  const sla=tempos.filter(t=>t<=SLA_H).length;
+  const p90=tempos.length?[...tempos].sort((a,b)=>a-b)[Math.ceil(.9*tempos.length)-1]:null;
+  const tq=R.filter(x=>x.tqt).length;
+  // evolução por paciente (precisa de ≥2 registros com a escala)
+  const porPac={};D.filter(x=>x.resp).sort((a,b)=>a.sol<b.sol?-1:1).forEach(x=>(porPac[x.pac]=porPac[x.pac]||[]).push(x));
+  const dl=k=>Object.values(porPac).map(a=>a.filter(x=>x[k]!=null)).filter(a=>a.length>=2).map(a=>a.at(-1)[k]-a[0][k]);
+  const dF=dl('fois'),dA=dl('asha'),avg=a=>a.length?(a.reduce((x,y)=>x+y,0)/a.length):null;
+  const sg=v=>v==null?'N/D':(v>0?'+':'')+v.toFixed(2).replace('.',',');
+  const K=[
+    ['Solicitações',D.length,`${pac} pacientes distintos`,'#0056b3'],
+    ['Pendentes (sem resposta)',pend,pct(pend,D.length)+' das solicitadas',pend?'#dc3545':'#28a745'],
+    [`Respondidas em ≤ ${SLA_H}h`,pct(sla,tempos.length),`${sla} de ${tempos.length} respondidas`,'#17a2b8'],
+    ['Tempo de 1ª resposta (mediana)',med(tempos)==null?'N/D':med(tempos)+' h','P90: '+(p90==null?'N/D':p90+' h')+' · média '+(tempos.length?(tempos.reduce((a,b)=>a+b,0)/tempos.length).toFixed(1).replace('.',','):'N/D')+' h','#ffc107'],
+    ['Consultorias / paciente',pac?(D.length/pac).toFixed(2).replace('.',','):'N/D','nº de consultorias, não de sessões','#fd7e14'],
+    ['Com traqueostomia',pct(tq,R.length),`${tq} de ${R.length} respondidas`,'#e83e8c'],
+    ['Encerradas (transferência)',enc,pct(enc,R.length)+' das respondidas','#6c757d'],
+    ['Δ FOIS médio',sg(avg(dF)),`n = ${dF.length} pacientes com ≥2 registros`,'#6f42c1'],
+    ['Δ ASHA NOMS médio',sg(avg(dA)),`n = ${dA.length} pacientes com ≥2 registros`,'#20c997']];
+  $('kpis').innerHTML=K.map(([t,v,s,c])=>`<div class="card kpi" style="--c:${c}"><h3>${t}</h3><p>${v}</p><small>${s}</small></div>`).join('');
+
+  // linha do tempo com dias sem movimento preenchidos (e semana quando o intervalo é longo)
+  const datas=D.flatMap(x=>[x.sol,x.r1]).filter(Boolean).sort();
+  if(datas.length){
+    const ini=new Date(datas[0]+'T00:00:00'),fim=new Date(datas.at(-1)+'T00:00:00'),dias=(fim-ini)/864e5;
+    const sem=dias>90, chave=iso=>{if(!sem)return iso;const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return d.toISOString().slice(0,10)};
+    const A={},B={},L=[];
+    for(let d=new Date(ini);d<=fim;d.setDate(d.getDate()+(sem?7:1))){
+      const k=chave(d.toISOString().slice(0,10));if(!L.includes(k))L.push(k)}
+    D.forEach(x=>{A[chave(x.sol)]=(A[chave(x.sol)]||0)+1;if(x.r1)B[chave(x.r1)]=(B[chave(x.r1)]||0)+1});
+    $('tl-hint').textContent=sem?'Agrupado por semana (início na segunda-feira)':'Agrupado por dia';
+    G('c-tl',{type:'line',data:{labels:L.map(fmt),datasets:[
+      {label:'Solicitadas',data:L.map(k=>A[k]||0),borderColor:COR[3],backgroundColor:'#dc354518',fill:true,tension:.3},
+      {label:'1ª resposta',data:L.map(k=>B[k]||0),borderColor:COR[1],backgroundColor:'#28a74518',fill:true,tension:.3}]},
+      options:OPT({plugins:{legend:{display:true,position:'top'},datalabels:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}})});
+  }
+
+  const faixas=[['≤ 2h',0,2],['2–6h',2,6],['6–12h',6,12],['12–24h',12,24],['24–48h',24,48],['> 48h',48,1e9]];
+  bar('c-faixa',faixas.map(f=>f[0]),faixas.map(([,a,b])=>tempos.filter(t=>t>a&&t<=b||(a==0&&t==0)).length),{cor:faixas.map((_,i)=>i<4?COR[1]:i==4?COR[2]:COR[3])});
+  const un={};R.forEach(x=>{if(x.tempo!=null)(un[x.area]=un[x.area]||[]).push(x.tempo)});
+  const U=Object.entries(un).filter(([,a])=>a.length>=MIN_N_UNIDADE).map(([k,a])=>[k,med(a)]).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  bar('c-unid',U.map(u=>u[0]),U.map(u=>u[1]),{h:true,cor:COR[3]});
+  const C=ord(cnt(D.filter(x=>x.cons),x=>x.cons));bar('c-cons',C.map(c=>c[0]),C.map(c=>c[1]),{h:true});
+  const ND=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'],dia=cnt(D,x=>ND[new Date(x.sol+'T00:00:00').getDay()]);
+  const ordDia=ND.slice(1).concat(ND[0]);bar('c-dia',ordDia,ordDia.map(d=>dia[d]||0));
+  const tn=cnt(D.filter(x=>x.h!=null),x=>x.h>=7&&x.h<=12?'Manhã (07–12h)':x.h>=13&&x.h<=18?'Tarde (13–18h)':'Noite (19–06h)');
+  donut('c-turno',Object.keys(tn),Object.values(tn));
+  const E=ord(cnt(D.filter(x=>x.esp),x=>x.esp)).slice(0,7);bar('c-esp',E.map(e=>e[0]),E.map(e=>e[1]),{h:true,cor:COR[5]});
+  const so=cnt(D,x=>x.conselho.includes('CREMERS')?'Médicos':x.conselho.includes('COREN')?'Enfermeiros':'Outros');donut('c-sol',Object.keys(so),Object.values(so));
+  const vi=cnt(R,x=>x.via);donut('c-via',Object.keys(vi),Object.values(vi));
+  const ve=cnt(R,x=>x.vent);donut('c-vent',Object.keys(ve),Object.values(ve));
+  const nv=cnt(R,x=>x.niv),nk=['Alto','Médio','Baixo','Não informado'];
+  bar('c-niv',nk,nk.map(k=>nv[k]||0),{cor:[COR[3],COR[2],COR[1],'#adb5bd']});
+  const fo=cnt(R.filter(x=>x.fois!=null),x=>x.fois);bar('c-fois',[1,2,3,4,5,6,7].map(n=>'FOIS '+n),[1,2,3,4,5,6,7].map(n=>fo[n]||0),{cor:[1,2,3,4,5,6,7].map(n=>n<=3?COR[3]:n<=5?COR[2]:COR[1])});
+  const av=cnt(R,x=>x.avc);donut('c-avc',Object.keys(av),Object.values(av));
+
+  // qualidade dos dados
+  const cob=(f)=>`${R.filter(f).length} de ${R.length} (${pct(R.filter(f).length,R.length)})`;
+  $('qual').innerHTML=`Registros no filtro: <b>${D.length}</b> · respondidos: <b>${R.length}</b> · pendentes: <b>${pend}</b><br>
+  FOIS identificado em ${cob(x=>x.fois!=null)} · ASHA NOMS em ${cob(x=>x.asha!=null)}<br>
+  Nível assistencial em ${cob(x=>x.niv!=='Não informado')} · Via de alimentação em ${cob(x=>x.via!=='Não identificada')} · Ventilação em ${cob(x=>x.vent!=='Não identificada')}<br>
+  Percentuais de FOIS/via/ventilação dependem de o texto seguir o modelo de evolução (campos rotulados). Quanto menor a cobertura, mais cautela ao interpretar.`;
+}
+
+/* ---------- carga do CSV ---------- */
+function carregar(file){
+  if(!file)return;const rd=new FileReader();
+  rd.onload=e=>{
+    let txt;try{txt=new TextDecoder('utf-8',{fatal:true}).decode(e.target.result)}catch(_){txt=new TextDecoder('iso-8859-1').decode(e.target.result)}
+    Papa.parse(txt,{header:true,skipEmptyLines:true,transformHeader:h=>h.replace(/^\uFEFF/,'').trim(),complete:r=>{
+      TODAS=enriquecer(r.data);
+      if(!TODAS.length){alert('Não encontrei linhas válidas. Confira se é o relatório de consultorias (coluna SOLIC_CONSULTORIA).');return}
+      $('drop').style.display='none';$('app').style.display='block';
+      $('aviso').innerHTML='<b>Atenção às datas do export:</b> nos horários do AGHUSE, os “minutos” vêm iguais ao número do mês (ex.: 16:10 em outubro). O painel usa só a data e a hora cheia, e o tempo de resposta vem da coluna <code>TEMPO_RESPOSTA_HORAS</code> do próprio sistema.';
+      montarFiltros();filtrar()}});
+  };rd.readAsArrayBuffer(file)}
+$('drop').onclick=()=>$('file').click();
+$('file').onchange=e=>carregar(e.target.files[0]);
+['dragover','dragenter'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.add('over')}));
+['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.remove('over')}));
+$('drop').addEventListener('drop',e=>carregar(e.dataTransfer.files[0]));
+['f-serv','f-ini','f-fim'].forEach(id=>$(id).onchange=filtrar);
+$('f-areas').onchange=filtrar;
+$('f-todas').onchange=e=>{document.querySelectorAll('.ck').forEach(c=>c.checked=e.target.checked);filtrar()};
+document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>preset(b.dataset.d));
+</script>
+</body>
+</html>
